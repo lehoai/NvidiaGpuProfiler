@@ -15,7 +15,7 @@ Built with C++, wxWidgets, CMake, and NVIDIA Management Library (NVML).
   - Works on XFCE, GNOME, and other Linux desktops (uses GTK via wxWidgets).
 
 ## Screenshots
-
+![](./images/screenshot.png)
 ## Build & Run
 
 ### Prerequisites
