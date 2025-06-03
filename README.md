@@ -36,7 +36,7 @@ sudo apt install build-essential cmake libwxgtk3.0-gtk3-dev libnvidia-ml-dev
 ### Build
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/lehoai/NvidiaGpuProfiler.git
 cd Todo
 mkdir build && cd build
 cmake ..
