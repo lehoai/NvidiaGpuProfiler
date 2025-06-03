@@ -18,6 +18,7 @@ private:
     void OnAbout(wxCommandEvent& event);
     void OnGpuTimer(wxTimerEvent& event);
     void GetGpuData();
+    void OnGpuSelected(wxCommandEvent& event);
 
     // UI Controls
     wxPanel* mainPanel;
@@ -27,6 +28,8 @@ private:
     wxStaticText* lblGpuMemoryUsage;
     wxStaticText* lblGpuTemperature;
     wxStaticText* lblGpuPowerUsage;
+    wxListBox* gpuListBox;
+    std::vector<Gpu> gpus;
 
     TimelineChart* memoryChart;
     TimelineChart* utilizationChart;

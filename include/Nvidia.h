@@ -1,5 +1,6 @@
 #include <string>
 #include "GpuData.h"
+#include <vector>
 
 class Nvidia {
     private:
@@ -11,4 +12,5 @@ class Nvidia {
         Nvidia();
         ~Nvidia();
         Gpu* getData();
+        std::vector<Gpu> getAllGpuData();
 };
