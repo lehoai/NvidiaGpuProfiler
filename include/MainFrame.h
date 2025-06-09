@@ -30,6 +30,7 @@ private:
     wxStaticText* lblGpuPowerUsage;
     wxListBox* gpuListBox;
     std::vector<Gpu> gpus;
+    int selectedGpuIndex;
 
     TimelineChart* memoryChart;
     TimelineChart* utilizationChart;

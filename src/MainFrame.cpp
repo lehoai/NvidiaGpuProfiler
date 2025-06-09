@@ -18,9 +18,13 @@ MainFrame::MainFrame(const wxString& title)
 {
     nvidia = new Nvidia();
     timer = new wxTimer(this, wxID_ANY);
+    selectedGpuIndex = 0; // Initialize to first GPU
     Bind(wxEVT_TIMER, &MainFrame::OnGpuTimer, this);
 
     CreateControls();
+
+    // Bind GPU selection event
+    gpuListBox->Bind(wxEVT_LISTBOX, &MainFrame::OnGpuSelected, this);
 
     // Create status bar
     CreateStatusBar();
@@ -133,7 +137,7 @@ void MainFrame::OnAbout(wxCommandEvent& /*event*/)
 
 void MainFrame::GetGpuData()
 {
-    Gpu* gpu = nvidia->getData();
+    Gpu* gpu = nvidia->getData(selectedGpuIndex);
     lblGpuName->SetLabel(wxString::Format("%s", gpu->name.c_str()));
     lblGpuPowerUsage->SetLabel(wxString::Format("Power usage / capacity: %dW / %dW", gpu->power_usage, gpu->power_capacity));
 
@@ -197,6 +201,7 @@ void MainFrame::OnGpuSelected(wxCommandEvent& /*event*/)
 {
     int sel = gpuListBox->GetSelection();
     if (sel == wxNOT_FOUND || sel >= (int)gpus.size()) return;
+    selectedGpuIndex = sel;
     const Gpu& gpu = gpus[sel];
     lblGpuName->SetLabel(wxString::Format("%s", gpu.name.c_str()));
     lblGpuPowerUsage->SetLabel(wxString::Format("Power usage / capacity: %dW / %dW", gpu.power_usage, gpu.power_capacity));

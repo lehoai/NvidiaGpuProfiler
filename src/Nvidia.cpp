@@ -35,18 +35,18 @@ Nvidia::~Nvidia()
     delete gpu;
 }
 
-void Nvidia::getGpuData()
+void Nvidia::getGpuData(int gpuIndex)
 {
     unsigned int device_count = 0;
     nvmlDeviceGetCount(&device_count);
-    if (device_count == 0) return;
+    if (device_count == 0 || gpuIndex >= (int)device_count) return;
     nvmlDevice_t device;
-    nvmlDeviceGetHandleByIndex(0, &device); // Get first GPU
+    nvmlDeviceGetHandleByIndex(gpuIndex, &device);
 
     char name[128];
     nvmlDeviceGetName(device, name, sizeof(name));
     gpu->name = name;
-    gpu->index = 0;
+    gpu->index = gpuIndex;
 
     nvmlUtilization_t utilization;
     nvmlDeviceGetUtilizationRates(device, &utilization);
@@ -68,13 +68,13 @@ void Nvidia::getGpuData()
     gpu->power_capacity = power_limit / 1000; // W
 }
 
-void Nvidia::getProcessData()
+void Nvidia::getProcessData(int gpuIndex)
 {
     unsigned int device_count = 0;
     nvmlDeviceGetCount(&device_count);
-    if (device_count == 0) return;
+    if (device_count == 0 || gpuIndex >= (int)device_count) return;
     nvmlDevice_t device;
-    nvmlDeviceGetHandleByIndex(0, &device); // Get first GPU
+    nvmlDeviceGetHandleByIndex(gpuIndex, &device);
 
     gpu->processes.clear();
     std::map<int, Process> pidMap;
@@ -121,10 +121,10 @@ void Nvidia::getProcessData()
     }
 }
 
-Gpu* Nvidia::getData()
+Gpu* Nvidia::getData(int gpuIndex)
 {
-    getGpuData();
-    getProcessData();
+    getGpuData(gpuIndex);
+    getProcessData(gpuIndex);
     return gpu;
 }
 
