@@ -8,6 +8,7 @@ Built with C++, wxWidgets, CMake, and NVIDIA Management Library (NVML).
 - **Real-time GPU Monitoring:**  
   - GPU name, utilization, memory usage, temperature, and power usage.
   - Timeline charts for memory, utilization, and temperature (like Task Manager).
+  - Support monitoring multiple NVIDIA GPUs.
 - **Process List:**  
   - Shows all processes using the GPU (compute/graphics/both).
   - Efficiently updates with minimal flicker.
@@ -75,9 +76,9 @@ CMakeLists.txt     # Build configuration
 
 ## Notes
 
-- Only the first GPU (index 0) is monitored.
 - Process names/paths are read from `/proc/<pid>/cmdline`.
 - Requires NVIDIA proprietary driver and NVML support.
-- Multiple GPUs, SSH remote features are comming soon
+- SSH remote features are coming soon
+
 ## License
 MIT
