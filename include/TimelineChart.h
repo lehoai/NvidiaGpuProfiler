@@ -10,10 +10,11 @@ public:
 
     int maxVal = 100;
     void AddDataPoint(int value);
+    void Clear();
 protected:
     void OnPaint(wxPaintEvent& event);
 private:
     std::vector<int> dataPoints;
-    int maxPoints = 100;
+    long unsigned maxPoints = 100;
     wxDECLARE_EVENT_TABLE();
 };

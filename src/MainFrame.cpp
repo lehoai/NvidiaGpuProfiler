@@ -18,9 +18,13 @@ MainFrame::MainFrame(const wxString& title)
 {
     nvidia = new Nvidia();
     timer = new wxTimer(this, wxID_ANY);
+    selectedGpuIndex = 0; // Initialize to first GPU
     Bind(wxEVT_TIMER, &MainFrame::OnGpuTimer, this);
 
     CreateControls();
+
+    // Bind GPU selection event
+    gpuListBox->Bind(wxEVT_LISTBOX, &MainFrame::OnGpuSelected, this);
 
     // Create status bar
     CreateStatusBar();
@@ -35,21 +39,31 @@ MainFrame::MainFrame(const wxString& title)
 void MainFrame::CreateControls()
 {
     mainPanel = new wxPanel(this);
-    
-    // Create a vertical sizer for the main panel
+    // Sizer root
+    wxBoxSizer* rootSizer = new wxBoxSizer(wxHORIZONTAL);
+
+    // Sidebar GPU
+    gpuListBox = new wxListBox(mainPanel, wxID_ANY);
+    // Lấy danh sách nhiều GPU và binding lên list
+    gpus = nvidia->getAllGpuData();
+    gpuListBox->Clear();
+    for (const auto& gpu : gpus) {
+        gpuListBox->Append(wxString::Format("GPU %d: %s", gpu.index, gpu.name));
+    }
+
+    // Right panel (GPU info)
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
-    
-    // label gpu name
+
     wxBoxSizer* line1Sizer = new wxBoxSizer(wxHORIZONTAL);
-    lblGpuName = new wxStaticText(mainPanel, ID_TASK_INPUT, wxEmptyString,
-                              wxDefaultPosition, wxDefaultSize);
+
+    // label gpu name
+    lblGpuName = new wxStaticText(mainPanel, ID_TASK_INPUT, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     lblGpuName->SetFont(wxFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
 
     // label gpu power usage
-    lblGpuPowerUsage = new wxStaticText(mainPanel, ID_TASK_INPUT, wxEmptyString,
-                              wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
+    lblGpuPowerUsage = new wxStaticText(mainPanel, ID_TASK_INPUT, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_RIGHT);
     lblGpuPowerUsage->SetFont(wxFont(11, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
-    
+
     line1Sizer->Add(lblGpuName, 1, wxEXPAND | wxALL, 0);
     line1Sizer->Add(lblGpuPowerUsage, 1, wxEXPAND | wxALL, 0);
 
@@ -59,8 +73,7 @@ void MainFrame::CreateControls()
     // =========================== memory chart ===========================
     wxBoxSizer* lineMemorySizer = new wxBoxSizer(wxVERTICAL);
 
-    lblGpuMemoryUsage = new wxStaticText(mainPanel, ID_TASK_INPUT, wxEmptyString,
-                              wxDefaultPosition, wxDefaultSize);
+    lblGpuMemoryUsage = new wxStaticText(mainPanel, ID_TASK_INPUT, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     lblGpuMemoryUsage->SetFont(wxFont(11, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
     memoryChart = new TimelineChart(mainPanel, ID_TASK_INPUT, wxDefaultPosition, wxDefaultSize);
@@ -71,8 +84,7 @@ void MainFrame::CreateControls()
     // =========================== utilization chart ===========================
     wxBoxSizer* lineUtilizationSizer = new wxBoxSizer(wxVERTICAL);
 
-    lblGpuUtilization = new wxStaticText(mainPanel, ID_TASK_INPUT, wxEmptyString,
-                              wxDefaultPosition, wxDefaultSize);
+    lblGpuUtilization = new wxStaticText(mainPanel, ID_TASK_INPUT, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     lblGpuUtilization->SetFont(wxFont(11, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
     utilizationChart = new TimelineChart(mainPanel, ID_TASK_INPUT, wxDefaultPosition, wxDefaultSize);
@@ -85,33 +97,31 @@ void MainFrame::CreateControls()
     lineChartsSizer->Add(lineUtilizationSizer,1, wxEXPAND | wxALL, 0);
 
     // =========================== Temperature chart ===========================
-    lblGpuTemperature = new wxStaticText(mainPanel, ID_TASK_INPUT, wxEmptyString,
-                              wxDefaultPosition, wxDefaultSize);
+    lblGpuTemperature = new wxStaticText(mainPanel, ID_TASK_INPUT, wxEmptyString, wxDefaultPosition, wxDefaultSize);
     lblGpuTemperature->SetFont(wxFont(11, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
-    
     temperatureChart = new TimelineChart(mainPanel, ID_TASK_INPUT, wxDefaultPosition, wxDefaultSize);
     temperatureChart->maxVal = 100;
-    
-    // Create process list
-    processList = new wxListView(mainPanel, ID_TASK_LIST, wxDefaultPosition, 
-                            wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL);
+
+    // =========================== process list ===========================
+    processList = new wxListView(mainPanel, ID_TASK_LIST, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL);
+
     processList->SetBackgroundStyle(wxBG_STYLE_PAINT);
     processList->AppendColumn("PID", wxLIST_FORMAT_LEFT, 60);
-    processList->AppendColumn("Process", wxLIST_FORMAT_LEFT, 520);
+    processList->AppendColumn("Process", wxLIST_FORMAT_LEFT, 300);
     processList->AppendColumn("Memory Usage", wxLIST_FORMAT_LEFT, 100);
     processList->AppendColumn("Type", wxLIST_FORMAT_LEFT, 80);
-    
-    // Create delete button
-    // deleteButton = new wxButton(mainPanel, ID_DELETE, "Delete Selected");
-    
-    // Add everything to the main sizer
+
+    // =========================== add all sizers to mainSizer ===========================
     mainSizer->Add(line1Sizer, 0, wxEXPAND | wxALL, 5);
     mainSizer->Add(lineChartsSizer, 1, wxEXPAND | wxALL, 5);
     mainSizer->Add(lblGpuTemperature, 0, wxEXPAND | wxALL, 5);
     mainSizer->Add(temperatureChart, 1, wxEXPAND | wxALL, 5);
     mainSizer->Add(processList, 1, wxEXPAND | wxALL, 5);
-    
-    mainPanel->SetSizer(mainSizer);
+
+    // Add sidebar and right panel to rootSizer
+    rootSizer->Add(gpuListBox, 1, wxEXPAND | wxALL, 5);
+    rootSizer->Add(mainSizer, 4, wxEXPAND | wxALL, 0);
+    mainPanel->SetSizer(rootSizer);
 }
 
 void MainFrame::OnExit(wxCommandEvent& /*event*/)
@@ -127,7 +137,7 @@ void MainFrame::OnAbout(wxCommandEvent& /*event*/)
 
 void MainFrame::GetGpuData()
 {
-    Gpu* gpu = nvidia->getData();
+    Gpu* gpu = nvidia->getData(selectedGpuIndex);
     lblGpuName->SetLabel(wxString::Format("%s", gpu->name.c_str()));
     lblGpuPowerUsage->SetLabel(wxString::Format("Power usage / capacity: %dW / %dW", gpu->power_usage, gpu->power_capacity));
 
@@ -185,5 +195,36 @@ void MainFrame::GetGpuData()
 void MainFrame::OnGpuTimer(wxTimerEvent& /*event*/)
 {
     GetGpuData();
+}
+
+void MainFrame::OnGpuSelected(wxCommandEvent& /*event*/)
+{
+    int sel = gpuListBox->GetSelection();
+    if (sel == wxNOT_FOUND || sel >= (int)gpus.size()) return;
+    selectedGpuIndex = sel;
+    const Gpu& gpu = gpus[sel];
+    lblGpuName->SetLabel(wxString::Format("%s", gpu.name.c_str()));
+    lblGpuPowerUsage->SetLabel(wxString::Format("Power usage / capacity: %dW / %dW", gpu.power_usage, gpu.power_capacity));
+    lblGpuMemoryUsage->SetLabel(wxString::Format("Memory usage: %dMib / %dMib", gpu.memory_usage, gpu.memory_total));
+    memoryChart->maxVal = gpu.memory_total;
+    memoryChart->Clear();
+    memoryChart->AddDataPoint(gpu.memory_usage);
+    lblGpuUtilization->SetLabel(wxString::Format("Utilization: %d%%", gpu.utilization));
+    utilizationChart->Clear();
+    utilizationChart->AddDataPoint(gpu.utilization);
+    lblGpuTemperature->SetLabel(wxString::Format("Temperature: %dC", gpu.temperature));
+    temperatureChart->Clear();
+    temperatureChart->AddDataPoint(gpu.temperature);
+    // Cập nhật process list
+    processList->Freeze();
+    processList->DeleteAllItems();
+    for (size_t i = 0; i < gpu.processes.size(); ++i) {
+        const auto& proc = gpu.processes[i];
+        long idx = processList->InsertItem(i, wxString::Format("%d", proc.pid));
+        processList->SetItem(idx, 1, proc.path);
+        processList->SetItem(idx, 2, wxString::Format("%d", proc.gpu_usage));
+        processList->SetItem(idx, 3, proc.type);
+    }
+    processList->Thaw();
 }
 

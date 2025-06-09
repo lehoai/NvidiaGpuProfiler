@@ -35,18 +35,18 @@ Nvidia::~Nvidia()
     delete gpu;
 }
 
-void Nvidia::getGpuData()
+void Nvidia::getGpuData(int gpuIndex)
 {
     unsigned int device_count = 0;
     nvmlDeviceGetCount(&device_count);
-    if (device_count == 0) return;
+    if (device_count == 0 || gpuIndex >= (int)device_count) return;
     nvmlDevice_t device;
-    nvmlDeviceGetHandleByIndex(0, &device); // Get first GPU
+    nvmlDeviceGetHandleByIndex(gpuIndex, &device);
 
     char name[128];
     nvmlDeviceGetName(device, name, sizeof(name));
     gpu->name = name;
-    gpu->index = 0;
+    gpu->index = gpuIndex;
 
     nvmlUtilization_t utilization;
     nvmlDeviceGetUtilizationRates(device, &utilization);
@@ -68,13 +68,13 @@ void Nvidia::getGpuData()
     gpu->power_capacity = power_limit / 1000; // W
 }
 
-void Nvidia::getProcessData()
+void Nvidia::getProcessData(int gpuIndex)
 {
     unsigned int device_count = 0;
     nvmlDeviceGetCount(&device_count);
-    if (device_count == 0) return;
+    if (device_count == 0 || gpuIndex >= (int)device_count) return;
     nvmlDevice_t device;
-    nvmlDeviceGetHandleByIndex(0, &device); // Get first GPU
+    nvmlDeviceGetHandleByIndex(gpuIndex, &device);
 
     gpu->processes.clear();
     std::map<int, Process> pidMap;
@@ -121,9 +121,79 @@ void Nvidia::getProcessData()
     }
 }
 
-Gpu* Nvidia::getData()
+Gpu* Nvidia::getData(int gpuIndex)
 {
-    getGpuData();
-    getProcessData();
+    getGpuData(gpuIndex);
+    getProcessData(gpuIndex);
     return gpu;
+}
+
+std::vector<Gpu> Nvidia::getAllGpuData() {
+    std::vector<Gpu> result;
+    unsigned int device_count = 0;
+    nvmlDeviceGetCount(&device_count);
+    for (unsigned int i = 0; i < device_count; ++i) {
+        nvmlDevice_t device;
+        nvmlDeviceGetHandleByIndex(i, &device);
+        Gpu gpu;
+        char name[128];
+        nvmlDeviceGetName(device, name, sizeof(name));
+        gpu.name = name;
+        gpu.index = i;
+        nvmlUtilization_t utilization;
+        nvmlDeviceGetUtilizationRates(device, &utilization);
+        gpu.utilization = utilization.gpu;
+        nvmlMemory_t mem_info;
+        nvmlDeviceGetMemoryInfo(device, &mem_info);
+        gpu.memory_usage = mem_info.used / 1024 / 1024;
+        gpu.memory_total = mem_info.total / 1024 / 1024;
+        unsigned int temp;
+        nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temp);
+        gpu.temperature = temp;
+        unsigned int power, power_limit;
+        nvmlDeviceGetPowerUsage(device, &power);
+        nvmlDeviceGetEnforcedPowerLimit(device, &power_limit);
+        gpu.power_usage = power / 1000;
+        gpu.power_capacity = power_limit / 1000;
+        // Process info
+        std::map<int, Process> pidMap;
+        unsigned int infoCount = 100;
+        nvmlProcessInfo_t infos[100];
+        nvmlReturn_t result_nvml = nvmlDeviceGetComputeRunningProcesses(device, &infoCount, infos);
+        if (result_nvml == NVML_SUCCESS) {
+            for (unsigned int j = 0; j < infoCount; ++j) {
+                int pid = infos[j].pid;
+                Process process;
+                process.pid = pid;
+                process.path = getProcessCmdlineFromPid(pid);
+                process.gpu_usage = infos[j].usedGpuMemory / 1024 / 1024;
+                process.type = "compute";
+                pidMap[pid] = process;
+            }
+        }
+        infoCount = 100;
+        nvmlProcessInfo_t graphicsInfos[100];
+        result_nvml = nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, graphicsInfos);
+        if (result_nvml == NVML_SUCCESS) {
+            for (unsigned int j = 0; j < infoCount; ++j) {
+                int pid = graphicsInfos[j].pid;
+                auto it = pidMap.find(pid);
+                if (it != pidMap.end()) {
+                    it->second.type = "both";
+                } else {
+                    Process process;
+                    process.pid = pid;
+                    process.path = getProcessCmdlineFromPid(pid);
+                    process.gpu_usage = graphicsInfos[j].usedGpuMemory / 1024 / 1024;
+                    process.type = "graphics";
+                    pidMap[pid] = process;
+                }
+            }
+        }
+        for (const auto& kv : pidMap) {
+            gpu.processes.push_back(kv.second);
+        }
+        result.push_back(gpu);
+    }
+    return result;
 }

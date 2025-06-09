@@ -23,7 +23,12 @@ void TimelineChart::AddDataPoint(int value) {
     Refresh();
 }
 
-void TimelineChart::OnPaint(wxPaintEvent& event) {
+void TimelineChart::Clear() {
+    dataPoints.clear();
+    Refresh();
+}
+
+void TimelineChart::OnPaint(wxPaintEvent& /*event*/) {
     wxPaintDC dc(this);
     wxSize size = GetClientSize();
     wxGraphicsContext* gc = wxGraphicsContext::Create(dc);
