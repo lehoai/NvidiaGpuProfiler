@@ -17,11 +17,14 @@ find_package(wxWidgets REQUIRED COMPONENTS core base adv)
 include(${wxWidgets_USE_FILE})
 
 # Add source files
-add_executable(${PROJECT_NAME} 
+add_executable(${PROJECT_NAME}
     src/main.cpp
     src/MainFrame.cpp
-    src/Nvidia.cpp
+    src/GpuService.cpp
     src/TimelineChart.cpp
+    src/GpuPanel.cpp
+    src/CpuPanel.cpp
+    src/CpuService.cpp
 )
 
 # Link wxWidgets libraries

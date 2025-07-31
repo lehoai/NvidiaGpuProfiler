@@ -1,4 +1,4 @@
-#include "Nvidia.h"
+#include "GpuService.h"
 #include <array>
 #include <memory>
 #include <stdexcept>
@@ -23,19 +23,19 @@ std::string getProcessCmdlineFromPid(int pid) {
     return cmdline;
 }
 
-Nvidia::Nvidia()
+GpuService::GpuService()
 {
-    gpu = new Gpu();
+    gpu = new GpuData();
     nvmlInit();
 }
 
-Nvidia::~Nvidia()
+GpuService::~GpuService()
 {
     nvmlShutdown();
     delete gpu;
 }
 
-void Nvidia::getGpuData(int gpuIndex)
+void GpuService::getGpuData(int gpuIndex)
 {
     unsigned int device_count = 0;
     nvmlDeviceGetCount(&device_count);
@@ -68,7 +68,7 @@ void Nvidia::getGpuData(int gpuIndex)
     gpu->power_capacity = power_limit / 1000; // W
 }
 
-void Nvidia::getProcessData(int gpuIndex)
+void GpuService::getProcessData(int gpuIndex)
 {
     unsigned int device_count = 0;
     nvmlDeviceGetCount(&device_count);
@@ -121,21 +121,21 @@ void Nvidia::getProcessData(int gpuIndex)
     }
 }
 
-Gpu* Nvidia::getData(int gpuIndex)
+GpuData* GpuService::getData(int gpuIndex)
 {
     getGpuData(gpuIndex);
     getProcessData(gpuIndex);
     return gpu;
 }
 
-std::vector<Gpu> Nvidia::getAllGpuData() {
-    std::vector<Gpu> result;
+std::vector<GpuData> GpuService::getAllGpuData() {
+    std::vector<GpuData> result;
     unsigned int device_count = 0;
     nvmlDeviceGetCount(&device_count);
     for (unsigned int i = 0; i < device_count; ++i) {
         nvmlDevice_t device;
         nvmlDeviceGetHandleByIndex(i, &device);
-        Gpu gpu;
+        GpuData gpu;
         char name[128];
         nvmlDeviceGetName(device, name, sizeof(name));
         gpu.name = name;
