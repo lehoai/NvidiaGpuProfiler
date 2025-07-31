@@ -1,3 +1,5 @@
+#ifndef TIMELINECHART_H
+#define TIMELINECHART_H
 #include <wx/panel.h>
 #include <wx/dcclient.h>
 #include <vector>
@@ -18,3 +20,4 @@ private:
     long unsigned maxPoints = 100;
     wxDECLARE_EVENT_TABLE();
 };
+#endif // TIMELINECHART_H
